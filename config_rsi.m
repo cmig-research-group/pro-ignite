@@ -28,7 +28,7 @@ params.CorrectNoise = 1;
     % If you have and want to use the Docker/Podman container, set the container to 'Docker' 
 params.ProstateSeg = 1;
 params.ProstateSegVendor = 'CMIG'; % Use 'Cortechs' for the model from Cortechs.ai (if you have the Docker image)
-params.ProstateSegContainer = 'Singularity';
+params.ProstateSegContainer = 'Docker';
 
 % Automated urethra segmentation
   % Deep-learning AI segmentation model from CMIG
@@ -36,7 +36,7 @@ params.ProstateSegContainer = 'Singularity';
     % If on the CMIG network, set the container to 'Singularity'
     % If you have and want to use the Docker/Podman container, set the container to 'Docker' 
 params.UrethraSeg = 1;
-params.UrethraSegContainer = 'Singularity';
+params.UrethraSegContainer = 'Docker';
 
 % DICOM outputs
 params.WriteDICOMS = 1;
