@@ -1,11 +1,17 @@
-function writeSRdicom(dicomdir, outputdir, message_text)
+function writeSRdicom(dicomdir, outputdir, message_text, fixed_uids)
 % dicomdir - template dicom
 % outputdir - directory to save created dicoms
     
 load('srTemplate.mat');
 
-uid.sop = dicomuid;
-uid.series = dicomuid;
+if exist('fixed_uids', 'var')
+  uid.sop = fixed_uids.SOPInstanceUID;
+  uid.series = fixed_uids.SeriesInstanceUID;
+else
+  uid.sop = dicomuid;
+  uid.series = dicomuid;
+end
+
 mkdir(outputdir);
 if isfolder(dicomdir)
   % If dicomdir is a directory, retrieve metadata from the first file in the directory
@@ -17,11 +23,7 @@ else
 end
 pt_metadata = dicominfo(filename);
 
-try
-  seriesDesc = sprintf('PPro Report %s', datestr(now, 'mm/dd/yy - HH:MM:SS'));
-catch
-  seriesDesc = sprintf('PPro Report %s', datestr(now, 'mm/dd/yy HH:MM:SS'));
-end
+seriesDesc = sprintf('PPro Status Report');
 
 % Change relevant tags of interest
 srTemplate.SeriesDescription = seriesDesc;
@@ -31,11 +33,9 @@ srTemplate.StudyDate = datestr(now, 'yyyymmdd');
 srTemplate.StudyTime = datestr(now, 'HHMMSS');
 srTemplate.SeriesDate = datestr(now, 'yyyymmdd');
 
-duid = dicomuid;
 srTemplate.MediaStorageSOPInstanceUID = uid.sop;
 srTemplate.SOPInstanceUID = uid.sop;
 srTemplate.SeriesInstanceUID = uid.series;
-%srTemplate.Unknown_0013_0002 = duid;
 
 srTemplate.PatientID = pt_metadata.PatientID;
 srTemplate.PatientName = pt_metadata.PatientName;
@@ -46,7 +46,7 @@ formattedDateTime = char(currentDateTime);
 
 srTemplate.ContentSequence.Item_6.UID = uid.series;
 
-srTemplate.ContentSequence.Item_12.ConceptNameCodeSequence.Item_1.CodeMeaning = 'Precision Pro Report';
+srTemplate.ContentSequence.Item_12.ConceptNameCodeSequence.Item_1.CodeMeaning = 'Precision Pro Status Report';
 srTemplate.ContentSequence.Item_12.ContentSequence.Item_1.TextValue = sprintf('%s', message_text);
 srTemplate.ContentSequence.Item_12.ContentSequence.Item_2.TextValue = sprintf('Content last updated: %s \n ', formattedDateTime);
 

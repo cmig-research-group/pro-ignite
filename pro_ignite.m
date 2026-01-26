@@ -1,6 +1,7 @@
 function pro_ignite(path_input, path_config_file)
 
 params = eval_file(path_config_file);
+destinations = eval_file(params.routing_config_file, 'destinations');
 
 
 % Directory management -----------------------------------------------------------
@@ -27,13 +28,13 @@ delete_old_directories(path_tmp_proc, tmp_age_limit);
 % Sort incoming data and collect patient ID
 data_info = unpack_data(path_input, path_tmp_raw, 'PatientID');
 subj_id = data_info.subject_ids{1};
-scan_dates = data_info.scan_dates;
 
 
 % Fetch paths to relevant series
 paths = struct('RSI_raw', [], 'T2_ax', [], 'CT', [], 'RT', [], 'generic', []);
-for i = 1:length(scan_dates)
-  paths_date = fetch_paths_pro_ignite( fullfile(path_tmp_raw, subj_id, scan_dates{i}) );
+scan_dates = dir(fullfile(path_tmp_raw, subj_id));
+for i = 3:length(scan_dates)
+  paths_date = fetch_paths_pro_ignite( fullfile(path_tmp_raw, subj_id, scan_dates(i).name) );
   paths.RSI_raw = cat(2, paths.RSI_raw, paths_date.RSI_raw);
   paths.T2_ax = cat(2, paths.T2_ax, paths_date.T2_ax);
   paths.CT = cat(2, paths.CT, paths_date.CT);
@@ -55,6 +56,9 @@ fprintf('\n');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 path_sr_out = fullfile(path_tmp_proc, subj_id, 'structured_reports');
+fixed_uids.SOPInstanceUID = dicomuid;
+fixed_uids.SeriesInstanceUID = dicomuid;
+
 
 % Process T2 ----------------------------------------------------------------------
 if ~isempty(paths.T2_ax)
@@ -64,7 +68,7 @@ if ~isempty(paths.T2_ax)
 
   t_now = datetime('now');
   message_text = sprintf('%s -- T2 volume received for processing\n(T2 processing may take upwards of 60 minutes)\n\n', datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
   fname_contour_prostate_mgz = fullfile(path_out_T2, 'prostate_contour_T2_space.mgz');
@@ -88,7 +92,7 @@ if ~isempty(paths.T2_ax)
 
   t_now = datetime('now');
   message_text = sprintf('%s%s -- T2 processing complete\n\n', message_text, datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
 end
@@ -99,7 +103,7 @@ if ~isempty(paths.RSI_raw)
 
   t_now = datetime('now');
   message_text = sprintf('%s%s -- RSI data received for processing\n(RSI processing may take upwards of 60 minutes)\n\n', message_text, datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
   fprintf('Processing raw RSI series\n');
@@ -127,7 +131,7 @@ if ~isempty(paths.RSI_raw)
 
   t_now = datetime('now');
   message_text = sprintf('%s%s -- RSI processing complete\n\n', message_text, datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
 end
@@ -138,7 +142,7 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
 
   t_now = datetime('now');
   message_text = sprintf('%s%s -- MR-CT registration underway\n(MR-CT registration may take upwards of 20 minutes)\n\n', message_text, datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
   path_in_CT = paths.CT{1};
@@ -247,16 +251,14 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
 
   t_now = datetime('now');
   message_text = sprintf('%s%s -- MR-CT registration complete\n\n', message_text, datestr(t_now, 'HH:MM:SS'));
-  writeSRdicom(path_in_T2, path_sr_out, message_text);
+  writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
   send_dicoms(path_sr_out, destinations);
 
 end
 
 
 % DICOM routing -------------------------------------------------------------------
-destinations = eval_file(params.routing_config_file, 'destinations');
-
-if exist(path_out_reg_dcms, 'dir')
+if exist('path_out_reg_dcms', 'var')
   send_dicoms(path_out_reg_dcms, destinations);
 else
   send_dicoms(fullfile(path_tmp_proc, subj_id), destinations);
@@ -264,7 +266,7 @@ end
 
 t_now = datetime('now');
 message_text = sprintf('%s%s -- Entire Pro-IGNITE pipeline complete', message_text, datestr(t_now, 'HH:MM:SS'));
-writeSRdicom(path_in_T2, path_sr_out, message_text);
+writeSRdicom(path_in_T2, path_sr_out, message_text, fixed_uids);
 send_dicoms(path_sr_out, destinations);
 
 
