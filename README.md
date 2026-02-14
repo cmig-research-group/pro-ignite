@@ -44,12 +44,20 @@ sudo mkdir -p /home/orthanc/tmp
 sudo mkdir -p /home/orthanc/scripts
 ```
 
-5. Install pro_ignite.lua in the directory for Orthanc scripts (assuming default configuration provided by this repo)
+5. Configure paths at the top of [pro_ignite.lua](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/lua/pro_ignite.lua)
+```
+PATH_WRITE_TARGET = '/home/orthanc/pro_ignite'
+PATH_PROIGNITE_TMP = '/home/tmp_pro_ignite'
+PATH_CONFIG_DIR = '/home/ccconlin/work/pro-ignite'
+PATH_LOGS = '/home/orthanc/pro_ignite_logs'
+```
+
+6. Install [pro_ignite.lua](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/lua/pro_ignite.lua) in the directory for Orthanc scripts (assuming default configuration provided by this repo)
 ```
 sudo cp pro-ignite/orthanc/lua/pro_ignite.lua /home/orthanc/scripts/
 ```
 
-6. Restart Orthanc
+7. Restart Orthanc
 ```
 sudo systemctl daemon-reload
 sudo service orthanc restart
