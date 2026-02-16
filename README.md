@@ -1,3 +1,6 @@
+## Overview of Pro-IGNITE software architecture
+![](/software_architecture.png)
+
 ## How to deploy Pro-IGNITE software
 ### Prerequisites
 Linux: These instructions assume your system is running Ubuntu. Other Linux distrubutions will likely work with minor changes (e.g., apt -> dnf for RHEL)
