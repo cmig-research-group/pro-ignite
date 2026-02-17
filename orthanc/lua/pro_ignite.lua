@@ -49,7 +49,7 @@ function OnStablePatient(patientId, tags, metadata)
    
    local path_in = ToAscii(PATH_WRITE_TARGET .. '/' .. patientId)
 
-   local cmd = string.format('sudo docker run -v /var/run/docker.sock:/var/run/docker.sock -v %s:%s -v %s:%s -v %s:%s ghcr.io/cmig-research-group/pro_ignite %s %s/config_app.m >%s/%s.log 2>&1', PATH_WRITE_TARGET, PATH_WRITE_TARGET, PATH_PROIGNITE_TMP, PATH_PROIGNITE_TMP, PATH_CONFIG_DIR, PATH_CONFIG_DIR, path_in, PATH_CONFIG_DIR, PATH_LOGS, patientId)
+   local cmd = string.format('sudo docker run -v /var/run/docker.sock:/var/run/docker.sock -v %s:%s -v %s:%s -v %s:%s ghcr.io/cmig-research-group/pro_ignite %s %s/config_app.m >%s/%s.log 2>&1 &', PATH_WRITE_TARGET, PATH_WRITE_TARGET, PATH_PROIGNITE_TMP, PATH_PROIGNITE_TMP, PATH_CONFIG_DIR, PATH_CONFIG_DIR, path_in, PATH_CONFIG_DIR, PATH_LOGS, patientId)
    print(cmd)
    os.execute(cmd)
    
