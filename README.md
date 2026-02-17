@@ -10,6 +10,15 @@ Linux: These instructions assume your system is running Ubuntu. Other Linux dist
 git clone https://github.com/cmig-research-group/pro-ignite.git
 ```
 
+### Configure Pro-IGNITE processing
+There are 3 configuration files for different parts of the software:
+
+**`config_app.m`** -> Settings for the gestalt app
+
+**`config_routing.m`** -> Defines DICOM destination(s) where output images should be sent
+
+`config_rsi.m` -> RSI processing options (in general, this file should be left alone)
+
 ### Install Docker
 ```
 sudo apt install docker.io
