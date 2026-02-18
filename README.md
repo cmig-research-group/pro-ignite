@@ -25,11 +25,7 @@ sudo apt install docker.io
 ```
 
 ### Pull Docker images
-The core Pro-IGNITE software is packaged as two Docker images, hosted on GitHub [here](https://github.com/orgs/cmig-research-group/packages). To pull them onto your local machine, you need a GitHub account with an access token that allows for package access; see documentation [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
-```
-export GHCR_TOKEN=YOUR_TOKEN
-echo $GHCR_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-```
+The core Pro-IGNITE software is packaged as two Docker images, hosted on GitHub [here](https://github.com/orgs/cmig-research-group/packages). Install them via `docker pull`:
 ```
 docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
 docker pull ghcr.io/cmig-research-group/pro_ignite:latest
