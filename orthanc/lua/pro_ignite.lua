@@ -1,7 +1,11 @@
-PATH_WRITE_TARGET = '/home/orthanc/pro_ignite'
-PATH_PROIGNITE_TMP = '/home/tmp_pro_ignite'
+-- Change this path! It needs to point to the directory where config_app.m is stored.
 PATH_CONFIG_DIR = '/home/ccconlin/work/pro-ignite'
+
+-- Only change these paths if you aren't happy with the default configuration
+PATH_WRITE_TARGET = '/home/orthanc/pro_ignite'
 PATH_LOGS = '/home/orthanc/pro_ignite_logs'
+PATH_PROIGNITE_TMP = '/home/tmp_pro_ignite'
+
 
 function ToAscii(s)
    -- http://www.lua.org/manual/5.1/manual.html#pdf-string.gsub

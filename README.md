@@ -58,10 +58,13 @@ sudo mkdir -p /home/orthanc/scripts
 
 5. Configure paths at the top of [pro_ignite.lua](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/lua/pro_ignite.lua)
 ```
-PATH_WRITE_TARGET = '/home/orthanc/pro_ignite'
-PATH_PROIGNITE_TMP = '/home/tmp_pro_ignite'
+-- Change this path! It needs to point to the directory where config_app.m is stored.
 PATH_CONFIG_DIR = '/home/ccconlin/work/pro-ignite'
+
+-- Only change these paths if you aren't happy with the default configuration
+PATH_WRITE_TARGET = '/home/orthanc/pro_ignite'
 PATH_LOGS = '/home/orthanc/pro_ignite_logs'
+PATH_PROIGNITE_TMP = '/home/tmp_pro_ignite'
 ```
 
 6. Install [pro_ignite.lua](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/lua/pro_ignite.lua) in the directory for Orthanc scripts (assuming default configuration provided by this repo)
