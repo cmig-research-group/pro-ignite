@@ -7,7 +7,7 @@ Linux: These instructions assume your system is running Ubuntu. Other Linux dist
 
 ### Clone this repo
 ```
-git clone https://github.com/cmig-research-group/pro-ignite.git
+git clone --depth 1 https://github.com/cmig-research-group/pro-ignite.git
 ```
 
 ### Configure Pro-IGNITE processing
