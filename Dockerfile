@@ -18,6 +18,6 @@ RUN /pro-ignite/tmp/install -agreeToLicense yes -destinationFolder /pro-ignite -
 RUN rm -r ./tmp
 
 COPY ./compiled/pro_ignite .
-COPY ./compiled/run_pro_ignite.sh .
+COPY ./run_pro_ignite.sh .
 
 ENTRYPOINT ["/pro-ignite/run_pro_ignite.sh", "/pro-ignite/v912"]
