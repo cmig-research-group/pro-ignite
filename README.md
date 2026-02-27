@@ -1,3 +1,8 @@
+## Table of Contents
+1. [Overview of Pro-IGNITE software architecture](https://github.com/cmig-research-group/pro-ignite?tab=readme-ov-file#overview-of-pro-ignite-software-architecture)
+2. [How to deploy Pro-IGNITE software](https://github.com/cmig-research-group/pro-ignite?tab=readme-ov-file#how-to-deploy-pro-ignite-software)
+3. [How to update Pro-IGNITE software](https://github.com/cmig-research-group/pro-ignite/edit/main/README.md#how-to-update-pro-ignite-software)
+
 ## Overview of Pro-IGNITE software architecture
 ![](/software_architecture.png)
 
@@ -77,3 +82,23 @@ sudo cp pro-ignite/orthanc/lua/pro_ignite.lua /home/orthanc/scripts/
 sudo systemctl daemon-reload
 sudo service orthanc restart
 ```
+
+## How to update Pro-IGNITE software
+The RSI processing container is the package most likely to require updates. To update it, you simply need to fetch the latest version using `docker pull`:
+```
+docker pull ghcr.io/cmig-research-group/pro_ignite:latest
+```
+
+The prostate segmentation container can be updated similarly:
+```
+docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
+```
+Once a new Docker image is pulled, you can remove the old version using `docker rmi <image id>`
+
+Orthanc is managed via apt: 
+```
+sudo apt update
+sudo apt install Orthanc
+```
+
+
