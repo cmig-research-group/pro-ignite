@@ -32,8 +32,8 @@ sudo apt install docker.io
 ### Pull Docker images
 The core Pro-IGNITE software is packaged as two Docker images, hosted on GitHub [here](https://github.com/orgs/cmig-research-group/packages). Install them via `docker pull`:
 ```
-docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
-docker pull ghcr.io/cmig-research-group/pro_ignite:latest
+sudo docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
+sudo docker pull ghcr.io/cmig-research-group/pro_ignite:latest
 ```
 
 ### Install Orthanc DICOM server
@@ -86,12 +86,12 @@ sudo service orthanc restart
 ## How to update Pro-IGNITE software
 The RSI processing container is the package most likely to require updates. To update it, you simply need to fetch the latest version using `docker pull`:
 ```
-docker pull ghcr.io/cmig-research-group/pro_ignite:latest
+sudo docker pull ghcr.io/cmig-research-group/pro_ignite:latest
 ```
 
 The prostate segmentation container can be updated similarly:
 ```
-docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
+sudo docker pull ghcr.io/cmig-research-group/autoseg_prostate:latest
 ```
 Once a new Docker image is pulled, you can remove the old version using `docker rmi <image id>`
 
