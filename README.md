@@ -1,7 +1,7 @@
 ## Table of Contents
 1. [Overview of Pro-IGNITE software architecture](https://github.com/cmig-research-group/pro-ignite?tab=readme-ov-file#overview-of-pro-ignite-software-architecture)
 2. [How to deploy Pro-IGNITE software](https://github.com/cmig-research-group/pro-ignite?tab=readme-ov-file#how-to-deploy-pro-ignite-software)
-3. [How to update Pro-IGNITE software](https://github.com/cmig-research-group/pro-ignite/edit/main/README.md#how-to-update-pro-ignite-software)
+3. [How to update Pro-IGNITE software](https://github.com/cmig-research-group/pro-ignite?tab=readme-ov-file#how-to-update-pro-ignite-software)
 
 ## Overview of Pro-IGNITE software architecture
 ![](/software_architecture.png)
