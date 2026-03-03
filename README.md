@@ -42,17 +42,25 @@ sudo apt install orthanc
 ```
 
 ### Configure Orthanc
-1. Orthanc will be managed as a systemd service. Stop Orthanc while it's being configured:
+Orthanc will be managed as a systemd service. **It is important that the Orthanc service is running as root.**
+
+1. Stop Orthanc while it's being configured:
 ```
 sudo service orthanc stop
 ```
 
-2. Install the systemd unit file for Orthanc from this repo: [pro-ignite/orthanc/orthanc.service](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/orthanc.service)
+2. Ensure that the Orthanc daemon is running as root. You can either edit the systemd unit file that came installed with Orthanc, or copy over the file included in this repo: [pro-ignite/orthanc/orthanc.service](https://github.com/cmig-research-group/pro-ignite/blob/main/orthanc/orthanc.service). `sudo service orthanc status` will indicate where the systemd unit file is located on your system.
 
-
-3. Install the Orthanc configuration file from this repo by copying it into /etc/orthanc/
+3. Edit orthanc.json to configure Orthanc for your system. You can use the default Pro-IGNITE configuration by copying the orthanc.json file from this repo into /etc/orthanc/ (and then `chmod` it to prevent permissions issues when rebooting the daemon):  
 ```
 sudo cp pro-ignite/orthanc/orthanc.json /etc/orthanc/
+sudo chmod g=rw,o=rw /etc/orthanc/orthanc.json
+```
+
+You may also edit the pre-installed configuration file directly to suit your needs:
+```
+sudo chmod g=rw,o=rw /etc/orthanc/orthanc.json
+nano /etc/orthanc/orthanc.json
 ```
 
 4. Make some directories that will be used by Orthanc (assuming default configuration provided by this repo)
@@ -79,7 +87,6 @@ sudo cp pro-ignite/orthanc/lua/pro_ignite.lua /home/orthanc/scripts/
 
 7. Restart Orthanc
 ```
-sudo systemctl daemon-reload
 sudo service orthanc restart
 ```
 
