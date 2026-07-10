@@ -37,23 +37,17 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
   atlasReferenceVolumeCTX = vol_ref_ctx;
   t2ReferenceVolumeCTX = vol_ref_ctx;
   
-%% Load CT
-  bins_ct = -200:1:200;
-  fprintf('Loading CT: %s\n', pathToCTDicoms);
-  vol_ct_ctx = QD_read_dicomdir(pathToCTDicoms);
-  tmpCTVolumeCTX = vol_ct_ctx;
-  vol_ct_ctx.imgs = max( min(bins_ct), min(max(bins_ct), tmpCTVolumeCTX.imgs) );
   
 %% Load T2
   fprintf('Loading T2: %s\n', pathToT2Dicoms);
   vol_t2_ctx = QD_read_dicomdir(pathToT2Dicoms);
+  vol_t2_ctx = harmonize_ctxs(vol_t2_ctx, t2ReferenceVolumeCTX);
   
 %% Generate prostate mask from T2
-  fname_T2 = fullfile(outputDir, 'T2_corrected.mgz');
-  QD_ctx_save_mgh( vol_t2_ctx, fname_T2 );
-  
   if isempty(ProstateContourPath)
     fprintf('%s -- %s.m:    Segmenting prostate from T2 volume using CMIG software...\n',datestr(now),mfilename);
+    fname_T2 = fullfile(outputDir, 'T2_corrected.mgz');
+    QD_ctx_save_mgh( vol_t2_ctx, fname_T2 );
     if isdeployed
       container = 'docker';
     else
@@ -64,6 +58,7 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
     contour = QD_ctx_load_mgh(ProstateContourPath);
   end
   vol_t2_seg_ctx = contour;
+  vol_t2_seg_ctx = harmonize_ctxs(vol_t2_seg_ctx, t2ReferenceVolumeCTX);
   
 %% Do some intensity corrections for the T2 Volume
   fprintf('N3 corrections...\n');
@@ -102,12 +97,32 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
   ivec_mask = find(volmask);
   
   M_scale_t2 = M_scale;
+
+
+%% Load CT
+  bins_ct = -200:1:200;
+  fprintf('Loading CT: %s\n', pathToCTDicoms);
+  vol_ct_ctx = QD_read_dicomdir(pathToCTDicoms);
+  tmpCTVolumeCTX = vol_ct_ctx;
+  vol_ct_ctx.imgs = max( min(bins_ct), min(max(bins_ct), tmpCTVolumeCTX.imgs) );
+  vol_ct_ctx = harmonize_ctxs(vol_ct_ctx, atlasReferenceVolumeCTX);
+
+  c0 = vol_ct_ctx.Mvxl2lph * [1 1 1 1]';
+  c1 = vol_ct_ctx.Mvxl2lph * [vol_ct_ctx.dimc vol_ct_ctx.dimr vol_ct_ctx.dimd 1]';
+  zmin = min(c0(3), c1(3));
+  zmax = max(c0(3), c1(3));
+  zrange = zmax - zmin;
+
+  % Differentiate between RT planning CTs that don't extend above the abdomen and
+  % PET/CTs that cover the whole body   
+  if zrange > 700
+    wb_flag = 1;
+  else 
+    wb_flag = 0;
+  end
   
   
 %% Scale CT volume
-  c0 = vol_ct_ctx.Mvxl2lph * [1 1 1 1]';
-  c1 = vol_ct_ctx.Mvxl2lph * [vol_ct_ctx.dimc vol_ct_ctx.dimr vol_ct_ctx.dimd 1]'; 
-  zmin = min(c0(3),c1(3));
   M_tmp = Mtrans(0,0,zmin+200); 
   M_scale_ct = M_scale*M_tmp; % Assume that prostate is approximately some fixed distance from bottom, shift and scale accordingly
   vol_ct_sca2_ctx = vol_resample(vol_ct_ctx, atlasReferenceVolumeCTX, M_scale_ct);
@@ -185,7 +200,7 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
   
   xhat0 = rowvec(vol_ct_sca2_ctx.Mvxl2lph(1:3,:)*[c1 c2 c3 1]');
   
-  
+
 %% Perform 3D grid search -- look for faster algorithm
   
   nlogcpdf1 = -log(max(1e-3,jpdf_sum./max(10000,sum(jpdf_sum,2)))); % Conditional pdf of ct given t2
@@ -197,7 +212,33 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
   
   d1vec = -30:10:30;
   d2vec = -30:10:30;
-  d3vec = -60:10:60; % May be able to tighten this range
+  if wb_flag
+    fprintf('Using broader search for whole-body CT\n');
+    d3vec = -60:10:240;
+  else
+    fprintf('Using narrower search for RT planning CT\n');
+    d3vec = -60:10:60;
+  end
+
+  % Give a large penalty to zero-filled non-image area that results from resampling patient CT during registration 
+  % to avoid local minima when volume only partially overlaps with atlas
+  vol_fit = vol_ct_sca2_ctx.imgs;
+  [rows_vol_fit, cols_vol_fit, ~] = size(vol_fit);
+  numel_half_slice = (rows_vol_fit*cols_vol_fit)/2;
+  mask_zeros = (vol_fit == 0);
+  CC = bwconncomp(mask_zeros, 6);
+  numPixels = cellfun(@numel, CC.PixelIdxList);
+  [biggest, idx] = max(numPixels);
+  if ~isempty(biggest) && (biggest > numel_half_slice)
+    mask_bg = false(size(vol_fit));
+    mask_bg(CC.PixelIdxList{idx}) = true;
+    vol_fit(mask_bg) = -1000;
+    ctx_fit = vol_ct_sca2_ctx;
+    ctx_fit.imgs = vol_fit;
+  else
+    ctx_fit = vol_ct_sca2_ctx;
+  end
+
   xhat = xhat0;
   for pass = 1:2
     xhat_bak = xhat;
@@ -225,11 +266,15 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
     wtvol_cpdf_cropped = wtvol_cpdf(min(ivec1):max(ivec1),min(ivec2):max(ivec2),min(ivec3):max(ivec3)); ivec_mask_cropped = find(volmask_cropped>0.5);
     distvol_prostate_cropped = distvol_prostate(min(ivec1):max(ivec1),min(ivec2):max(ivec2),min(ivec3):max(ivec3));
     resfun = @(vol,x) vol_resample(vol,atlasReferenceVolumeCTX,Mtrans(x(1),x(2),x(3)));
-    resfun_cropped = @(vol,x) vol_resample(vol,vol_cropped_ctx,Mtrans(x(1),x(2),x(3)));
-    costfun = @(x) PROMRCT_cost_cpdf(getfield(resfun_cropped(vol_ct_sca2_ctx,x),'imgs'),volmu_cropped,volsd_cropped,vol_t2_sca_cropped,ivec_mask_cropped,nlogcpdf1,nlogcpdf2,bins_ct,bins_t2,wt_mse,wtvol_mse_cropped,wtvol_cpdf_cropped);
-  
+    % resfun_cropped = @(vol,x) vol_resample(vol,vol_cropped_ctx,Mtrans(x(1),x(2),x(3)));
+%    costfun = @(x) PROMRCT_cost_cpdf(getfield(resfun_cropped(vol_ct_sca2_ctx,x),'imgs'),volmu_cropped,volsd_cropped,vol_t2_sca_cropped,ivec_mask_cropped,nlogcpdf1,nlogcpdf2,bins_ct,bins_t2,wt_mse,wtvol_mse_cropped,wtvol_cpdf_cropped);
+    costfun = @(x) PROMRCT_cost_cpdf(resfun_cropped(ctx_fit, vol_cropped_ctx, x), volmu_cropped,volsd_cropped,vol_t2_sca_cropped,ivec_mask_cropped,nlogcpdf1,nlogcpdf2,bins_ct,bins_t2,wt_mse,wtvol_mse_cropped,wtvol_cpdf_cropped);
+
     if pass==1
-      costmat = NaN(length(d1vec),length(d2vec),length(d3vec));
+      min_cost = 1e6;
+      d_best = [0 0 0];
+
+%      costmat = NaN(length(d1vec),length(d2vec),length(d3vec));
       tic
       for di3 = 1:length(d3vec)
         for di1 = 1:length(d1vec)
@@ -238,15 +283,23 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
             x(1) = xhat_bak(1) + d1vec(di1);
             x(2) = xhat_bak(2) + d2vec(di2);
             x(3) = xhat_bak(3) + d3vec(di3);
-            costmat(di1,di2,di3) = costfun(x);
-  %          fprintf(1,'ci=%d d=%f: cost=%e\n',ci,dvec(di),costvec(di));
+%            costmat(di1,di2,di3) = costfun(x);
+
+	    cost_test = costfun(x);
+
+	    if cost_test < min_cost
+	       d_best = [d1vec(di1) d2vec(di2) d3vec(di3)];
+	       min_cost = cost_test;
+	       fprintf('Best x = [%.2f %.2f %.2f]; cost = %f\n', x(1), x(2), x(3), cost_test);
+	    end
+
           end
         end
       end
       toc
-      [cost1 mi] = min(costmat(:));
-      [di1 di2 di3] = ind2sub(size(costmat),mi);
-      xhat_bak = xhat_bak + [d1vec(di1) d2vec(di2) d3vec(di3)];
+%      [cost1 mi] = min(costmat(:));
+%      [di1 di2 di3] = ind2sub(size(costmat),mi);
+      xhat_bak = xhat_bak + d_best; %[d1vec(di1) d2vec(di2) d3vec(di3)];
     end
   
     tic
@@ -275,7 +328,6 @@ function result = PROMRCT_App(pathToCTDicoms, pathToT2Dicoms, outputDir, varargi
   volmu_t2_seg_res_ctx = vol_resample(volmu_t2_seg_ctx,vol_ct_ctx,inv(M_ct_atlas)); % map mean t2 seg from atlas back to CT native coordinates
   vol_ct_sca_res_ctx = resfun(vol_ct_sca2_ctx,xhat);
   [cost vol_cost_mse vol_cost_cpdf1 vol_cost_cpdf2] = PROMRCT_cost_cpdf(vol_ct_sca_res_ctx.imgs,volmu,volsd,vol_t2_sca_ctx.imgs,ivec_mask,nlogcpdf1,nlogcpdf2,bins_ct,bins_t2,wt_mse,wtvol_mse,wtvol_cpdf);
-
 
   %% Upsampling stuff to address blurry T2 images post registration
   %% Crop CT volume to resampled T2 data, and then created upsampled version

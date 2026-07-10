@@ -63,7 +63,14 @@ fixed_uids.SeriesInstanceUID = dicomuid;
 % Process T2 ----------------------------------------------------------------------
 if ~isempty(paths.T2_ax)
 
-  path_in_T2 = paths.T2_ax{1};
+  if ~isempty(paths.RSI_raw)
+    fprintf('Identifying T2W series that matches RSI\n');
+    path_selected_T2 = select_T2w_series(paths.T2_ax, paths.RSI_raw{1}); 
+    fprintf('Selected T2W series: %s\n', path_selected_T2);
+    path_in_T2 = path_selected_T2;
+  else
+    path_in_T2 = paths.T2_ax{1};
+  end
   path_out_T2 = strrep(path_in_T2, '/raw/', '/proc/');
 
   t_now = datetime('now');
@@ -154,7 +161,6 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
   result = PROMRCT_App(path_in_CT, path_out_T2_dcms, path_out_reg, 'ProstateContourPath', fname_contour_prostate_mgz);
   M_T2_to_CT = result.M_reg;
   ctx_T2_CT = result.vol_t2_res_up_ctx; % Output Registered T2 Image
-  ctx_contour_CT = result.vol_t2_seg_res_up_ctx; % Output Registered T2 Prostate Segmentation 
 
   % Write DICOM files for T2 outputs
   fnames_CT = dir(path_in_CT);
@@ -180,13 +186,18 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
   path_out_T2_reg = fullfile(path_out_reg_dcms, sprintf('%s_reg', nixify(SeriesDescription_T2)));
   dicomwrite_cmig(ctx_T2_CT, path_out_T2_reg, dcm_hdr_struct);
 
+  load('volmu_ct_scaled.mat', 'vol_ref_ctx');
+  ctx_atlas_ref = vol_ref_ctx;
+  clear vol_ref_ctx;
+  ctx_T2_orig = QD_ctx_load_mgh(fname_T2_GUW_mgz);
+  ctx_T2_orig = harmonize_ctxs(ctx_T2_orig, ctx_atlas_ref);
+  
   % Apply registration to every series in the 'generic' list
-  if ~isempty(paths.generic)
-    ctx_T2_orig = QD_ctx_load_mgh(fname_T2_GUW_mgz);
-  end
   for i = 1:length(paths.generic)
+    try
       path_in_generic = paths.generic{i};
       ctx_gen = QD_read_dicomdir(path_in_generic);
+      ctx_gen = harmonize_ctxs(ctx_gen, ctx_T2_orig);
       ctx_gen_T2 = vol_resample(ctx_gen, ctx_T2_orig, eye(4));
       ctx_gen_CT = vol_resample(ctx_gen_T2, ctx_T2_CT, M_T2_to_CT, 2);
 
@@ -207,13 +218,12 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
 
       path_out_gen = fullfile(path_out_reg_dcms, sprintf('%s_reg', nixify(SeriesDescription_generic)));
       dicomwrite_cmig(ctx_gen_CT, path_out_gen, dcm_hdr_struct);
+    catch ME
+      fprintf('ERROR: %s\n', ME.message);
+    end
   end
 
   % Apply registration to every RT contour
-  if ~isempty(paths.RT)
-    ctx_T2_orig = QD_ctx_load_mgh(fname_T2_GUW_mgz);
-  end
-
   candidate_series = [paths.T2_ax paths.CT, paths.generic];
   label_list = {};
   seg_indx = 1;
@@ -228,7 +238,7 @@ if ~isempty(paths.CT) && ~isempty(paths.T2_ax)
 
       ctx_rt = loadSegmentation(fname_RT, path_ref_dcms);
       rt_labels = ctx_rt.labels;
-
+      ctx_rt = harmonize_ctxs(ctx_rt, ctx_T2_orig);
       ctx_rt_T2 = vol_resample(ctx_rt, ctx_T2_orig, eye(4));
       ctx_rt_CT = vol_resample(ctx_rt_T2, ctx_T2_CT, M_T2_to_CT, 2);
       
