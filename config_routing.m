@@ -17,7 +17,7 @@
 % DICOM routing parameters
 destinations(1).ae_title = 'PROIGNITE';
 destinations(1).called_ae_title = 'ORTHANC';
-destinations(1).ip_address = '169.228.56.133';
+destinations(1).ip_address = '127.0.0.1';
 destinations(1).port = '4242';
 
 
